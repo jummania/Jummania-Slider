@@ -600,13 +600,8 @@ class JSlider @JvmOverloads constructor(
          * @return The instantiated view for the slider item.
          */
         override fun instantiateItem(parent: ViewGroup, position: Int): View {
-            // Inflate the view for the slider item
-            val view = getView(LayoutInflater.from(parent.context), parent)
-            // Callback method when a slider item is created, using modulo to ensure the position is within the item count
-            onSliderCreate(view, position % itemCount())
-            // Add the view to the parent view group
-            parent.addView(view)
-            return view
+            // Call super method using modulo to ensure the position is within the item count
+            return super.instantiateItem(parent, position % itemCount())
         }
     }
 
