@@ -1,7 +1,7 @@
 [versions]
-agp = "9.3.2"
-coil = "3.6.0"
-kotlin = "2.4.10"
+agp = "9.4.1"
+coil = "3.6.3"
+kotlin = "2.4.21"
 material = "1.14.0"
 viewpager = "1.1.0"
 

@@ -4,8 +4,6 @@ import android.content.Context
 import android.content.res.Resources
 import android.content.res.TypedArray
 import android.graphics.Color
-import android.os.Handler
-import android.os.Looper
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -79,12 +77,6 @@ class JSlider @JvmOverloads constructor(
     }
 
 
-    // Handler for updating the dot indicator position during auto-sliding
-    private val updateHandler by lazy {
-        Handler(Looper.getMainLooper())
-    }
-
-
     // Runnable object for updating the dot indicator position
     private var runnable: Runnable? = null
 
@@ -98,8 +90,8 @@ class JSlider @JvmOverloads constructor(
 
     // Object to store integer values related to the slider configuration
     private object IntObject {
-        var slidingDuration: Long = 1555 // Sliding duration in milliseconds
-        var size = 33 // Size of the dot indicator
+        var slidingDuration = 1555L // Sliding duration in milliseconds
+        var size = 16 // Size of the dot indicator
         var indicatorMarginHorizontal = 4 // Horizontal margin between dot indicators
         var selectedIndicatorColor = Color.WHITE // Color of the selected dot indicator
         var defaultIndicatorColor =
@@ -151,13 +143,14 @@ class JSlider @JvmOverloads constructor(
 
                 // Set sliding duration based on the attribute, default to 1555 milliseconds
                 setSlidingDuration(
-                    typedArray.getInt(R.styleable.JSlider_slidingDuration, 1555).toLong()
+                    typedArray.getInt(R.styleable.JSlider_slidingDuration, slidingDuration.toInt())
+                        .toLong()
                 )
 
                 // Set indicator size based on the attribute, default to 30 pixels
                 setIndicatorSize(
                     typedArray.getDimensionPixelSize(
-                        R.styleable.JSlider_indicatorSize, 33
+                        R.styleable.JSlider_indicatorSize, size
                     )
                 )
 
@@ -172,17 +165,21 @@ class JSlider @JvmOverloads constructor(
                 // Enable or disable auto-sliding based on the attribute, default to true
                 enableAutoSliding(
                     typedArray.getBoolean(
-                        R.styleable.JSlider_enableAutoSliding, true
+                        R.styleable.JSlider_enableAutoSliding, autoSlidingBoolean
                     )
                 )
 
                 // Enable or disable the indicator based on the attribute, default to true
-                enableIndicator(typedArray.getBoolean(R.styleable.JSlider_enableIndicator, true))
+                enableIndicator(
+                    typedArray.getBoolean(
+                        R.styleable.JSlider_enableIndicator, indicatorBoolean
+                    )
+                )
 
                 // Set indicator colors based on the attributes, default to semi-transparent white and white
                 setIndicatorColor(
                     typedArray.getColor(
-                        R.styleable.JSlider_defaultIndicatorColor, Color.parseColor("#90ffffff")
+                        R.styleable.JSlider_defaultIndicatorColor, defaultIndicatorColor
                     ), typedArray.getColor(R.styleable.JSlider_selectedIndicatorColor, Color.WHITE)
                 )
 
@@ -197,7 +194,7 @@ class JSlider @JvmOverloads constructor(
                 // Set horizontal margin for the indicator dots, default to 6 pixels
                 setIndicatorMarginHorizontal(
                     typedArray.getDimensionPixelSize(
-                        R.styleable.JSlider_indicatorMarginHorizontal, 4
+                        R.styleable.JSlider_indicatorMarginHorizontal, indicatorMarginHorizontal
                     )
                 )
 
@@ -288,7 +285,6 @@ class JSlider @JvmOverloads constructor(
 
                     // Handle auto-sliding
                     if (autoSlidingBoolean) {
-                        removeCallbacks()
                         postDelayed()
                     }
                 }
@@ -487,7 +483,6 @@ class JSlider @JvmOverloads constructor(
 
                     // Handle auto-sliding
                     if (autoSlidingBoolean) {
-                        removeCallbacks()
                         postDelayed()
                     }
                 }
@@ -590,7 +585,7 @@ class JSlider @JvmOverloads constructor(
          *
          * @return The maximum possible value of an integer, representing an infinite number of items.
          */
-        override fun getCount(): Int = Int.MAX_VALUE
+        override fun getCount(): Int = itemCount() + 1
 
         /**
          * Instantiate a slider item at the specified position.
@@ -738,7 +733,6 @@ class JSlider @JvmOverloads constructor(
      */
     fun startAutoSliding() {
         autoSlidingBoolean = true
-        removeCallbacks()
         postDelayed()
     }
 
@@ -853,7 +847,7 @@ class JSlider @JvmOverloads constructor(
      * @param animationType The type of animation to be applied.
      */
     fun setSlideAnimation(animationType: AnimationTypes) {
-        jSlider.setPageTransformer(animationType.reverse, animationType.onGetAnim(jSlider))
+        setPageTransformer(animationType.reverse, animationType.onGetAnim(jSlider))
     }
 
 
@@ -921,7 +915,6 @@ class JSlider @JvmOverloads constructor(
         // Check the window has focus and auto-sliding is enabled
         if (hasWindowFocus && autoSlidingBoolean) {
             // If the window gains focus and auto-sliding is enabled, start the auto-sliding
-            removeCallbacks()
             postDelayed()
         } else
         // If the window loses focus or auto-sliding is disabled, stop the auto-sliding
@@ -1015,7 +1008,6 @@ class JSlider @JvmOverloads constructor(
         override fun onPageSelected(i: Int) {
             // Handle auto-sliding when a new page is selected
             if (autoSlidingBoolean) {
-                removeCallbacks()
                 postDelayed()
             }
 
@@ -1034,7 +1026,6 @@ class JSlider @JvmOverloads constructor(
         override fun onPageScrollStateChanged(state: Int) {
             // Handle auto-sliding when dragging stops
             if (isDragging && state != SCROLL_STATE_DRAGGING && autoSlidingBoolean) {
-                removeCallbacks()
                 postDelayed()
             }
 
@@ -1141,7 +1132,7 @@ class JSlider @JvmOverloads constructor(
     private fun removeCallbacks() {
         if (runnable != null) {
             // Remove any pending callbacks for the 'update' function from the updateHandler
-            updateHandler.removeCallbacks(runnable!!)
+            handler?.removeCallbacks(runnable!!)
         }
     }
 
@@ -1152,10 +1143,13 @@ class JSlider @JvmOverloads constructor(
      * The delay duration is specified by 'slidingDuration'.
      */
     private fun postDelayed() {
-        if (runnable != null) {
+        val mRunnable = runnable
+        val mHandle = handler
+        if (mRunnable != null && mHandle != null) {
             // Post a delayed callback for the 'update' function to the updateHandler
             // The delay duration is specified by 'slidingDuration'
-            updateHandler.postDelayed(runnable!!, slidingDuration)
+            mHandle.removeCallbacks(mRunnable)
+            mHandle.postDelayed(mRunnable, slidingDuration)
         }
     }
 
